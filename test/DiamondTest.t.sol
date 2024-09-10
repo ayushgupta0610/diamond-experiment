@@ -5,5 +5,5 @@ import {Test} from "forge-std/Test.sol";
 import {console2} from "forge-std/console2.sol";
 
 contract DiamondTest is Test {
-    function setUp() {}
+    function setUp() public {}
 }
