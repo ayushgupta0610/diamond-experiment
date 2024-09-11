@@ -4,6 +4,11 @@ import "@nomicfoundation/hardhat-toolbox";
 // import "@nomiclabs/hardhat-waffle";
 
 const config: HardhatUserConfig = {
+  networks: {
+    hardhat: {
+      loggingEnabled: true,
+    },
+  },
   solidity: {
     compilers: [
       {
