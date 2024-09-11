@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {ERC165} from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
-
-contract Test2Facet is ERC165 {
+contract Test2Facet {
 
     address[] owners;
     uint256 totalCount;
@@ -14,7 +12,7 @@ contract Test2Facet is ERC165 {
         totalCount++;
     }
 
-    function manipulateCount(uint256 _totalCount) external {
+    function updateCount(uint256 _totalCount) external {
         totalCount = _totalCount;
     }
 

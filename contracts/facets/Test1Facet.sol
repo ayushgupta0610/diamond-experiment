@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {ERC165} from "@openzeppelin/contracts/utils/introspection/ERC165.sol"; 
-
-contract Test1Facet is ERC165 {
+contract Test1Facet {
 
     mapping(address => uint) public count;
     address[] public players;
