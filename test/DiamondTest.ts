@@ -42,14 +42,10 @@ function getFacetCuts(addresses: string[], facets: Interface[]): FacetCut[] {
 }
 
 describe("DiamondTest", function () {
-  console.log("Inside describe function");
   let diamondCutFacet: Contract,
     diamondLoupeFacet: Contract,
     ownershipFacet: Contract;
-  let diamond: Contract,
-    test1Facet: Contract,
-    test2Facet: Contract,
-    test3Facet: Contract;
+  let diamond: Contract;
   let result: string[];
   let addresses: string[] = [];
   let accounts: Signer[];
@@ -88,11 +84,7 @@ describe("DiamondTest", function () {
     const diamondArgs = {
       owner: await accounts[0].getAddress(),
     };
-    console.log("facetCuts: ", facetCuts);
-    console.log("diamondArgs: ", diamondArgs);
     diamond = await Diamond.deploy(facetCuts, diamondArgs);
-    console.log("diamond address: ", await diamond.getAddress());
-    console.log("diamond interface: ", diamond.interface);
 
     diamondCutFacet = await ethers.getContractAt(
       "DiamondCutFacet",
@@ -106,16 +98,6 @@ describe("DiamondTest", function () {
 
     ownershipFacet = await ethers.getContractAt(
       "OwnershipFacet",
-      await diamond.getAddress()
-    );
-
-    test1Facet = await ethers.getContractAt(
-      "Test1Facet",
-      await diamond.getAddress()
-    );
-
-    test2Facet = await ethers.getContractAt(
-      "Test2Facet",
       await diamond.getAddress()
     );
 
@@ -153,7 +135,6 @@ describe("DiamondTest", function () {
   });
 
   it("should add test2Facet functions", async function () {
-    console.log("addresses: ", addresses);
     const sel0 = ethers.id("addOwner(address)").slice(0, 10);
     const sel2 = ethers.id("getTotalCount()").slice(0, 10);
     const sel4 = ethers.id("testFunc2(address)").slice(0, 10);
@@ -170,8 +151,6 @@ describe("DiamondTest", function () {
       "0x"
     );
     [...result] = await diamondLoupeFacet.facetFunctionSelectors(addresses[4]);
-    console.log("result: ", result);
-    console.log("testSelectors: ", testSelectors);
     expect(result).to.have.members(testSelectors);
   });
 });
