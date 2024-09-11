@@ -26,12 +26,8 @@ contract Test2Facet is ERC165 {
         return owners;
     }
 
-    function testFunc(address user) external view returns (address[] memory, uint256, uint256) {
+    function testFunc2(address user) external view returns (address[] memory, uint256, uint256) {
         return (owners, totalCount, count[user]);
-    }
-
-    function supportsInterface(bytes4 interfaceId) public override view returns (bool) {
-        return super.supportsInterface(interfaceId);
     }
 }
 

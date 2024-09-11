@@ -31,8 +31,4 @@ contract Test1Facet is ERC165 {
     function testFunc(address user) external view returns (address[] memory, uint256, uint256) {
         return (players, teamsCount, count[user]);
     }
-
-    function supportsInterface(bytes4 interfaceId) public override view returns (bool) {
-        return super.supportsInterface(interfaceId);
-    }
 }

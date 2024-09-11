@@ -27,42 +27,39 @@ function getSelectors(contractInterface: Interface): string[] {
   return selectors;
 }
 
-// function removeItem<T>(array: T[], item: T): T[] {
-//   const index = array.indexOf(item);
-//   if (index > -1) {
-//     array.splice(index, 1);
-//   }
-//   return array;
+// function getSelectorsForTest1Facet(): string[] {
+//   // Selectors without 0x for Test1Facet
+//   const sel0 = ethers.id("addPlayer(address)").slice(0, 10);
+//   const sel1 = ethers.id("manipulateCount(uint256)").slice(0, 10);
+//   const sel2 = ethers.id("getTeamsCount()").slice(0, 10);
+//   const sel3 = ethers.id("getPlayers()").slice(0, 10);
+//   const sel4 = ethers.id("testFunc(address)").slice(0, 10);
+//   return [sel0, sel1, sel2, sel3, sel4, sel5];
 // }
 
-// function findPositionInFacets(
-//   facetAddress: string,
-//   facets: { facetAddress: string }[]
-// ): number {
-//   return facets.findIndex((facet) => facet.facetAddress === facetAddress);
+function getFacetCuts(addresses: string[], facets: Interface[]): FacetCut[] {
+  const facetCuts: FacetCut[] = []; // Initialize the array to hold FacetCut objects
+  for (let i = 0; i < facets.length; i++) {
+    const facet = facets[i]; // Get the corresponding facet
+    facetCuts.push({
+      // Push the new FacetCut object into the array
+      facetAddress: addresses[i],
+      action: FacetCutAction.Add,
+      functionSelectors: getSelectors(facet),
+    });
+  }
+  return facetCuts; // Return the array of FacetCut objects
+}
+
+// function getSelectorsForTest2Facet(): string[] {
+// Selectors without 0x for Test1Facet
+const sel0 = ethers.id("addOwner(address)").slice(0, 10);
+const sel1 = ethers.id("manipulateCount(uint256)").slice(0, 10);
+const sel2 = ethers.id("getTotalCount()").slice(0, 10);
+const sel3 = ethers.id("getOwners()").slice(0, 10);
+const sel4 = ethers.id("testFunc2(address)").slice(0, 10);
+// return [sel0, sel1, sel2, sel3, sel4, sel5];
 // }
-
-function getSelectorsForTest1Facet(): string[] {
-  // Selectors without 0x for Test1Facet
-  const sel0 = ethers.id("addPlayer(address)").slice(0, 10);
-  const sel1 = ethers.id("manipulateCount(uint256)").slice(0, 10);
-  const sel2 = ethers.id("getTeamsCount()").slice(0, 10);
-  const sel3 = ethers.id("getPlayers()").slice(0, 10);
-  const sel4 = ethers.id("testFunc(address)").slice(0, 10);
-  const sel5 = ethers.id("supportsInterface(bytes4)").slice(0, 10);
-  return [sel0, sel1, sel2, sel3, sel4, sel5];
-}
-
-function getSelectorsForTest2Facet(): string[] {
-  // Selectors without 0x for Test1Facet
-  const sel0 = ethers.id("addOwner(address)").slice(0, 10);
-  const sel1 = ethers.id("manipulateCount(uint256)").slice(0, 10);
-  const sel2 = ethers.id("getTotalCount()").slice(0, 10);
-  const sel3 = ethers.id("getOwners()").slice(0, 10);
-  const sel4 = ethers.id("testFunc(address)").slice(0, 10);
-  const sel5 = ethers.id("supportsInterface(bytes4)").slice(0, 10);
-  return [sel0, sel1, sel2, sel3, sel4, sel5];
-}
 
 describe("DiamondTest", function () {
   console.log("Inside describe function");
@@ -84,60 +81,71 @@ describe("DiamondTest", function () {
     console.log("Inside before function");
     const Diamond = await ethers.getContractFactory("Diamond");
     const DiamondCutFacet = await ethers.getContractFactory("DiamondCutFacet");
-    diamondCutFacet = await DiamondCutFacet.deploy();
-    addresses.push(await diamondCutFacet.getAddress());
+    const deployedDiamondCutFacet = await DiamondCutFacet.deploy();
+    addresses.push(await deployedDiamondCutFacet.getAddress());
     const DiamondLoupeFacet = await ethers.getContractFactory(
       "DiamondLoupeFacet"
     );
-    diamondLoupeFacet = await DiamondLoupeFacet.deploy();
-    addresses.push(await diamondLoupeFacet.getAddress());
+    const deployedDiamondLoupeFacet = await DiamondLoupeFacet.deploy();
+    addresses.push(await deployedDiamondLoupeFacet.getAddress());
     const OwnershipFacet = await ethers.getContractFactory("OwnershipFacet");
-    ownershipFacet = await OwnershipFacet.deploy();
-    addresses.push(await ownershipFacet.getAddress());
-
+    const deployedOwnershipFacet = await OwnershipFacet.deploy();
+    addresses.push(await deployedOwnershipFacet.getAddress());
     const Test1Facet = await ethers.getContractFactory("Test1Facet");
-    test1Facet = await Test1Facet.deploy();
-    addresses.push(await test1Facet.getAddress());
-
+    const deployedTest1Facet = await Test1Facet.deploy();
+    addresses.push(await deployedTest1Facet.getAddress());
     const Test2Facet = await ethers.getContractFactory("Test2Facet");
-    test2Facet = await Test2Facet.deploy();
-    addresses.push(await test2Facet.getAddress());
+    const deployedTest2Facet = await Test2Facet.deploy();
+    addresses.push(await deployedTest2Facet.getAddress());
 
-    const Test3Facet = await ethers.getContractFactory("Test3Facet");
-    test3Facet = await Test3Facet.deploy();
-    addresses.push(await test3Facet.getAddress());
-
-    console.log("account[0]: ", await accounts[0].getAddress());
-
-    const facetCuts: FacetCut[] = [
-      {
-        facetAddress: addresses[3],
-        action: FacetCutAction.Add,
-        functionSelectors: getSelectorsForTest1Facet(),
-      },
-      // {
-      //   facetAddress: addresses[4],
-      //   action: FacetCutAction.Add,
-      //   functionSelectors: getSelectorsForTest2Facet(),
-      // },
+    const facets = [
+      DiamondCutFacet.interface,
+      DiamondLoupeFacet.interface,
+      OwnershipFacet.interface,
+      // Test1Facet.interface,
+      // Test2Facet.interface,
     ];
-
-    let selectors: string[] = getSelectors(test3Facet.interface);
-    facetCuts.push({
-      facetAddress: addresses[5],
-      action: FacetCutAction.Add,
-      functionSelectors: selectors,
-    });
-
+    const facetCuts = getFacetCuts(addresses, facets);
     const diamondArgs = {
       owner: await accounts[0].getAddress(),
     };
     console.log("facetCuts: ", facetCuts);
     console.log("diamondArgs: ", diamondArgs);
     diamond = await Diamond.deploy(facetCuts, diamondArgs);
-    console.log("The above got executed");
-    // await diamond.deployed();
     console.log("diamond address: ", await diamond.getAddress());
+    console.log("diamond interface: ", diamond.interface);
+
+    diamondCutFacet = await ethers.getContractAt(
+      "DiamondCutFacet",
+      await diamond.getAddress()
+    );
+
+    diamondLoupeFacet = await ethers.getContractAt(
+      "DiamondLoupeFacet",
+      await diamond.getAddress()
+    );
+
+    ownershipFacet = await ethers.getContractAt(
+      "OwnershipFacet",
+      await diamond.getAddress()
+    );
+
+    test1Facet = await ethers.getContractAt(
+      "Test1Facet",
+      await diamond.getAddress()
+    );
+
+    test2Facet = await ethers.getContractAt(
+      "Test2Facet",
+      await diamond.getAddress()
+    );
+
+    // Get owner() from ownership facet
+    console.log("Account 0: ", await accounts[0].getAddress());
+    console.log(
+      "diamondDiamondOwnership owner: ",
+      await ownershipFacet.owner()
+    );
   });
 
   // it("should have three facets -- call to facetAddresses function", async function () {
@@ -146,29 +154,38 @@ describe("DiamondTest", function () {
   //   expect(addresses.length).to.equal(3);
   // });
 
-  it("should add test1 functions", async function () {
+  it("should remove test1Facet functions", async function () {
     console.log("Inside add function test");
-    // let testSelectors = (await getSelectors(test1Facet)).slice(0, -1);
-    // let testSelectors = selectors;
-    // addresses.push(await test1Facet.getAddress());
-    // await diamondCutFacet.diamondCut(
-    //   [[test1Facet.address, FacetCutAction.Add, testSelectors]],
-    //   zeroAddress,
-    //   "0x"
-    // );
-    // result = await diamondLoupeFacet.facetFunctionSelectors(addresses[3]);
-    // expect(result).to.have.members(testSelectors);
+    let testSelectors = [sel1, sel3];
+    await diamondCutFacet.diamondCut(
+      [
+        {
+          facetAddress: addresses[3],
+          action: FacetCutAction.Remove,
+          functionSelectors: testSelectors,
+        },
+      ],
+      zeroAddress,
+      "0x"
+    );
+    result = await diamondLoupeFacet.facetFunctionSelectors(addresses[3]);
+    expect(result).to.not.have.members(testSelectors);
   });
 
-  // it("should remove a few test1 functions", async function () {
-  //   addresses.push(test1Facet.address);
-  //   let selectorsToRemove = [sel0, sel3, sel5];
+  // it("should add test2Facet functions", async function () {
+  //   let testSelectors = [sel0, sel2, sel4];
   //   await diamondCutFacet.diamondCut(
-  //     [[test1Facet.address, FacetCutAction.Remove, selectorsToRemove]],
+  //     [
+  //       {
+  //         facetAddress: addresses[4],
+  //         action: FacetCutAction.Add,
+  //         functionSelectors: testSelectors,
+  //       },
+  //     ],
   //     zeroAddress,
   //     "0x"
   //   );
-  //   result = await diamondLoupeFacet.facetFunctionSelectors(addresses[3]);
-  //   expect(result).to.not.have.members(selectorsToRemove);
+  //   result = await diamondLoupeFacet.facetFunctionSelectors(addresses[4]);
+  //   expect(result).to.have.members(testSelectors);
   // });
 });
