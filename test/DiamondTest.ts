@@ -77,7 +77,6 @@ describe("DiamondTest", function () {
     const Test2Facet = await ethers.getContractFactory("Test2Facet");
     const deployedTest2Facet = await Test2Facet.deploy();
     addresses.push(await deployedTest2Facet.getAddress());
-
     const facets = [
       DiamondCutFacet.interface,
       DiamondLoupeFacet.interface,
@@ -129,7 +128,7 @@ describe("DiamondTest", function () {
   });
 
   it("should have three facets -- call to facetAddresses function", async function () {
-    addresses = await diamondLoupeFacet.facetAddresses();
+    const addresses = await diamondLoupeFacet.facetAddresses();
     console.log("Adresses: ", addresses);
     expect(addresses.length).to.equal(4);
   });
@@ -153,24 +152,26 @@ describe("DiamondTest", function () {
     expect(result).to.not.have.members(testSelectors);
   });
 
-  // it("should add test2Facet functions", async function () {
-  //   const sel0 = ethers.id("addOwner(address)").slice(0, 10);
-  //   const sel2 = ethers.id("getTotalCount()").slice(0, 10);
-  //   const sel4 = ethers.id("testFunc2(address)").slice(0, 10);
-  //   let testSelectors = [sel0, sel2, sel4];
-  //   await diamondCutFacet.diamondCut(
-  //     [
-  //       {
-  //         facetAddress: addresses[4],
-  //         action: FacetCutAction.Add,
-  //         functionSelectors: testSelectors,
-  //       },
-  //     ],
-  //     zeroAddress,
-  //     "0x"
-  //   );
-  //   console.log("addresses[4]", addresses[4]);
-  //   result = await diamondLoupeFacet.facetFunctionSelectors(addresses[4]);
-  //   expect(result).to.have.members(testSelectors);
-  // });
+  it("should add test2Facet functions", async function () {
+    console.log("addresses: ", addresses);
+    const sel0 = ethers.id("addOwner(address)").slice(0, 10);
+    const sel2 = ethers.id("getTotalCount()").slice(0, 10);
+    const sel4 = ethers.id("testFunc2(address)").slice(0, 10);
+    let testSelectors = [sel0, sel2, sel4];
+    await diamondCutFacet.diamondCut(
+      [
+        {
+          facetAddress: addresses[4],
+          action: FacetCutAction.Add,
+          functionSelectors: testSelectors,
+        },
+      ],
+      zeroAddress,
+      "0x"
+    );
+    [...result] = await diamondLoupeFacet.facetFunctionSelectors(addresses[4]);
+    console.log("result: ", result);
+    console.log("testSelectors: ", testSelectors);
+    expect(result).to.have.members(testSelectors);
+  });
 });
