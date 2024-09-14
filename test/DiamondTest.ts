@@ -109,7 +109,7 @@ describe("DiamondTest", function () {
     );
   });
 
-  it("should have three facets -- call to facetAddresses function", async function () {
+  it("should have four facets -- call to facetAddresses function", async function () {
     const addresses = await diamondLoupeFacet.facetAddresses();
     console.log("Adresses: ", addresses);
     expect(addresses.length).to.equal(4);
@@ -152,5 +152,6 @@ describe("DiamondTest", function () {
     );
     [...result] = await diamondLoupeFacet.facetFunctionSelectors(addresses[4]);
     expect(result).to.have.members(testSelectors);
+    expect(addresses.length).to.equal(5);
   });
 });
