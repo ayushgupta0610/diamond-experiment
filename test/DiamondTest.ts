@@ -154,4 +154,25 @@ describe("DiamondTest", function () {
     expect(result).to.have.members(testSelectors);
     expect(addresses.length).to.equal(5);
   });
+
+  it("should execute  functions", async function () {
+    const sel0 = ethers.id("addOwner(address)").slice(0, 10);
+    const sel2 = ethers.id("getTotalCount()").slice(0, 10);
+    const sel4 = ethers.id("testFunc2(address)").slice(0, 10);
+    let testSelectors = [sel0, sel2, sel4];
+    await diamondCutFacet.diamondCut(
+      [
+        {
+          facetAddress: addresses[4],
+          action: FacetCutAction.Add,
+          functionSelectors: testSelectors,
+        },
+      ],
+      zeroAddress,
+      "0x"
+    );
+    [...result] = await diamondLoupeFacet.facetFunctionSelectors(addresses[4]);
+    expect(result).to.have.members(testSelectors);
+    expect(addresses.length).to.equal(5);
+  });
 });
