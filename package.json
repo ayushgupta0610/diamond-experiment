@@ -16,6 +16,8 @@
     "hardhat": "^2.22.10"
   },
   "dependencies": {
+    "@aave/core-v3": "^1.19.3",
+    "@chainlink/env-enc": "^1.0.5",
     "@nomiclabs/hardhat-ethers": "^2.2.3",
     "@openzeppelin/contracts": "^5.0.2"
   }

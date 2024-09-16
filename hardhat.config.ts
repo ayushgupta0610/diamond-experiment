@@ -1,5 +1,7 @@
 import { HardhatUserConfig } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox";
+import * as envEnc from "@chainlink/env-enc";
+envEnc.config();
 // import "@nomiclabs/hardhat-ethers";
 // import "@nomiclabs/hardhat-waffle";
 
@@ -7,6 +9,10 @@ const config: HardhatUserConfig = {
   networks: {
     hardhat: {
       loggingEnabled: true,
+    },
+    ethereum: {
+      url: `${process.env.ETHEREUM_RPC_URL}`,
+      accounts: [`${process.env.PRIVATE_KEY}`], // Your private key
     },
   },
   solidity: {
