@@ -27,7 +27,7 @@ library LibAave {
 
     // set lending pool address
     function setLendingPoolAddress(address lendingPool) internal {
-        require(diamondStorage().lendingPool != address(0), "LibAave: Lending pool cant be address(0)");
+        require(lendingPool != address(0), "LibAave: Lending pool cant be address(0)");
         diamondStorage().lendingPool = lendingPool;
     }
    

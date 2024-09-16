@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
+import {console2} from "forge-std/console2.sol";
 import {LibAave} from "../libraries/LibAave.sol";
 import {IPool} from "@aave/core-v3/contracts/interfaces/IPool.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeTransferLib} from "lib/solady/src/utils/SafeTransferLib.sol";
 import {ReentrancyGuard} from "lib/solady/src/utils/ReentrancyGuard.sol";
 import {Initializable} from "lib/solady/src/utils/Initializable.sol";
+import {IAToken} from "@aave/core-v3/contracts/interfaces/IAToken.sol";
 
 contract AaveFacet is ReentrancyGuard, Initializable {
     using SafeTransferLib for address;
@@ -29,44 +31,47 @@ contract AaveFacet is ReentrancyGuard, Initializable {
      * @param token The address of the token to deposit
      * @param amount The amount of tokens to deposit
      */
-    function deposit(address lendingPoolAddress, address token, uint256 amount) external {
+    function deposit(address token, uint256 amount) external {
         require(amount > 0, "Amount must be greater than 0");
         
         // Transfer tokens from user to this contract
         token.safeTransferFrom(msg.sender, address(this), amount);
 
         // Approve lending pool to spend tokens
-        token.safeApprove(lendingPoolAddress, amount);
+        token.safeApprove(address(lendingPool()), amount);
 
         // Deposit tokens into Aave lending pool
-        IPool(lendingPoolAddress).supply(token, amount, msg.sender, 0);
+        lendingPool().supply(token, amount, msg.sender, 0);
 
         emit Deposited(msg.sender, token, amount);
     }
 
-     /**
+    /**
      * @dev Withdraws tokens from Aave lending pool
-     * @param token The address of the token to withdraw
-     * @param amount The amount of tokens to withdraw (use type(uint256).max for max amount)
+     * @param asset The address of the underlying asset to withdraw
+     * @param amount The amount of the underlying asset to withdraw
      */
-    function withdraw(address token, uint256 amount) external nonReentrant {
+    function withdraw(address asset, uint256 amount) external nonReentrant returns (uint256 amountWithdrawn) {
         require(amount > 0, "Amount must be greater than 0");
+        
+        uint256 userBalance = IERC20(lendingPool().getReserveData(asset).aTokenAddress).balanceOf(msg.sender);
+        console2.log("User balance: ", userBalance);
 
-        uint256 amountToWithdraw = amount;
         if (amount == type(uint256).max) {
-            amountToWithdraw = IERC20(token).balanceOf(address(this));
+            amount = userBalance;
         }
 
-        // Transfer the aToken from the user to this contract
-        // Get the aToken address from the lending pool
-        address aToken = lendingPool().getReserveData(token).aTokenAddress;
+        require(amount <= userBalance, "Insufficient balance");
+        
+        lendingPool().getReserveData(asset).aTokenAddress.safeTransferFrom(msg.sender, address(this), amount);
+        IERC20(lendingPool().getReserveData(asset).aTokenAddress).approve(address(lendingPool()), amount);
+        // Get the withdrawable amount possible
+        uint withdrawableAmount = IAToken(lendingPool().getReserveData(asset).aTokenAddress).balanceOf(msg.sender);
+        console2.log("Withdrawable amount: ", withdrawableAmount);
 
-        // TODO: Calculate the amountToWithdraw in aToken
-        uint256 aTokenAmount = amount;
-        aToken.safeTransferFrom(msg.sender, address(this), aTokenAmount);
-        uint256 withdrawnAmount = lendingPool().withdraw(token, amount, msg.sender);
+        amountWithdrawn = lendingPool().withdraw(asset, amount, msg.sender);
 
-        emit Withdrawn(msg.sender, token, withdrawnAmount);
+        emit Withdrawn(msg.sender, asset, amountWithdrawn);
     }
 
     /**
@@ -99,7 +104,13 @@ contract AaveFacet is ReentrancyGuard, Initializable {
         require(amount > 0, "Amount must be greater than 0");
         require(interestRateMode == 1 || interestRateMode == 2, "Invalid interest rate mode");
 
+
+        // Calculate if enough collateral is available by msg.sender
+        (uint256 totalCollateralBase, , , , , ) = lendingPool().getUserAccountData(msg.sender);
+        console2.log("Total collateral base: ", totalCollateralBase);
         lendingPool().borrow(token, amount, interestRateMode, 0, msg.sender);
+        // Transfer borrowed tokens to user
+        token.safeTransfer(msg.sender, amount);
 
         uint256 borrowRate = interestRateMode == 1 ? 
             lendingPool().getReserveData(token).currentStableBorrowRate :
@@ -126,6 +137,7 @@ contract AaveFacet is ReentrancyGuard, Initializable {
         token.safeTransferFrom(msg.sender, address(this), amountToRepay);
         token.safeApprove(address(lendingPool()), amountToRepay);
 
+        console2.log("Repaying amount: ", amountToRepay);
         lendingPool().repay(token, amountToRepay, interestRateMode, msg.sender);
     }
 
