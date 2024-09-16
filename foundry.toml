@@ -4,7 +4,9 @@ out = "out"
 libs = ["lib"]
 remappings = [
     "@diamond/contracts=lib/diamond-2/contracts",
-    '@openzeppelin/contracts=lib/openzeppelin-contracts/contracts'
+    '@openzeppelin/contracts=lib/openzeppelin-contracts/contracts',
+    '@aave/core-v3/contracts=lib/aave-v3-core/contracts',
+    '@comet/contracts=lib/comet/contracts',
 ]
 
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options

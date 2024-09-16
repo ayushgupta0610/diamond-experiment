@@ -155,11 +155,8 @@ describe("DiamondTest", function () {
     expect(addresses.length).to.equal(5);
   });
 
-  it("should execute  functions", async function () {
-    const sel0 = ethers.id("addOwner(address)").slice(0, 10);
-    const sel2 = ethers.id("getTotalCount()").slice(0, 10);
-    const sel4 = ethers.id("testFunc2(address)").slice(0, 10);
-    let testSelectors = [sel0, sel2, sel4];
+  it("should execute aave functions", async function () {
+    // Add aave functions and then test for them
     await diamondCutFacet.diamondCut(
       [
         {
@@ -174,5 +171,35 @@ describe("DiamondTest", function () {
     [...result] = await diamondLoupeFacet.facetFunctionSelectors(addresses[4]);
     expect(result).to.have.members(testSelectors);
     expect(addresses.length).to.equal(5);
+  });
+
+  // Test for aave deposit and withdraw functions
+  it("should deposit and withdraw aave", async function () {
+    // Deposit aave
+    const deposit = ethers.utils.id("deposit(uint256)");
+    const withdraw = ethers.utils.id("withdraw(uint256)");
+    const depositAmount = ethers.utils.parseEther("1");
+    const withdrawAmount = ethers.utils.parseEther("0.5");
+    const aaveAddress = "0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9";
+    const aave = await ethers.getContractAt("IERC20", aaveAddress);
+    const aaveBalanceBefore = await aave.balanceOf(
+      await accounts[0].getAddress()
+    );
+    await diamond.connect(accounts[0]).testFunc2(aaveAddress);
+    await aave
+      .connect(accounts[0])
+      .approve(await diamond.getAddress(), depositAmount);
+    await diamond.connect(accounts[0]).testFunc2(deposit, depositAmount);
+    const aaveBalanceAfter = await aave.balanceOf(
+      await accounts[0].getAddress()
+    );
+    expect(aaveBalanceAfter).to.equal(aaveBalanceBefore.sub(depositAmount));
+    await diamond.connect(accounts[0]).testFunc2(withdraw, withdrawAmount);
+    const aaveBalanceAfterWithdraw = await aave.balanceOf(
+      await accounts[0].getAddress()
+    );
+    expect(aaveBalanceAfterWithdraw).to.equal(
+      aaveBalanceAfter.add(withdrawAmount)
+    );
   });
 });
