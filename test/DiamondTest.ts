@@ -1,6 +1,7 @@
-import { ethers } from "hardhat";
+import { ethers, network } from "hardhat";
 import { expect } from "chai";
 import { Contract, Signer, Interface, FunctionFragment } from "ethers";
+import { AaveFacet, AaveFacet__factory, IERC20 } from "../typechain-types";
 
 interface FacetCut {
   facetAddress: string;
@@ -41,20 +42,38 @@ function getFacetCuts(addresses: string[], facets: Interface[]): FacetCut[] {
   return facetCuts; // Return the array of FacetCut objects
 }
 
+async function impersonateSigner(account: string): Promise<Signer> {
+  await network.provider.request({
+    method: "hardhat_impersonateAccount",
+    params: [account],
+  });
+  await network.provider.send("hardhat_setBalance", [
+    account,
+    "0x56BC75E2D63100000", // 100 ETH
+  ]);
+  console.log("Balance: ", await ethers.provider.getBalance(account));
+  return await ethers.provider.getSigner(account);
+}
+
 describe("DiamondTest", function () {
   let diamondCutFacet: Contract,
     diamondLoupeFacet: Contract,
-    ownershipFacet: Contract;
+    ownershipFacet: Contract,
+    aaveFacet: AaveFacet;
+  let AaveFacet: AaveFacet__factory;
   let diamond: Contract;
   let result: string[];
   let addresses: string[] = [];
   let accounts: Signer[];
 
-  const zeroAddress = "0x0000000000000000000000000000000000000000";
+  const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
+  const WETH_ADDRESS = "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2";
+  const AAVE_POOL_ADDRESS = "0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2";
+  const WHALE_ADDRESS = "0xF977814e90dA44bFA03b6295A0616a897441aceC";
+  const OWNER_ADDRESS = "0xD3a7e3C5602F8A66B58dc17ce33f739eFac33da2"; // WETH holder
 
   before(async function () {
     accounts = await ethers.getSigners();
-    console.log("Inside before function");
     const Diamond = await ethers.getContractFactory("Diamond");
     const DiamondCutFacet = await ethers.getContractFactory("DiamondCutFacet");
     const deployedDiamondCutFacet = await DiamondCutFacet.deploy();
@@ -73,6 +92,10 @@ describe("DiamondTest", function () {
     const Test2Facet = await ethers.getContractFactory("Test2Facet");
     const deployedTest2Facet = await Test2Facet.deploy();
     addresses.push(await deployedTest2Facet.getAddress());
+    AaveFacet = await ethers.getContractFactory("AaveFacet");
+    console.log("AaveFacet selectors :", getSelectors(AaveFacet.interface));
+    const deployedAaveFacet = await AaveFacet.deploy();
+    addresses.push(await deployedAaveFacet.getAddress());
     const facets = [
       DiamondCutFacet.interface,
       DiamondLoupeFacet.interface,
@@ -101,6 +124,11 @@ describe("DiamondTest", function () {
       await diamond.getAddress()
     );
 
+    aaveFacet = await ethers.getContractAt(
+      "AaveFacet",
+      await diamond.getAddress()
+    );
+
     // Get owner() from ownership facet
     console.log("Account 0: ", await accounts[0].getAddress());
     console.log(
@@ -122,12 +150,12 @@ describe("DiamondTest", function () {
     await diamondCutFacet.diamondCut(
       [
         {
-          facetAddress: zeroAddress,
+          facetAddress: ZERO_ADDRESS,
           action: FacetCutAction.Remove,
           functionSelectors: testSelectors,
         },
       ],
-      zeroAddress,
+      ZERO_ADDRESS,
       "0x"
     );
     result = await diamondLoupeFacet.facetFunctionSelectors(addresses[3]);
@@ -147,59 +175,33 @@ describe("DiamondTest", function () {
           functionSelectors: testSelectors,
         },
       ],
-      zeroAddress,
+      ZERO_ADDRESS,
       "0x"
     );
     [...result] = await diamondLoupeFacet.facetFunctionSelectors(addresses[4]);
     expect(result).to.have.members(testSelectors);
-    expect(addresses.length).to.equal(5);
   });
 
-  it("should execute aave functions", async function () {
-    // Add aave functions and then test for them
+  it("should have aave functions", async function () {
+    // Encode init function on aave facet with lending pool address
+    const encodedData = aaveFacet.interface.encodeFunctionData("init", [
+      AAVE_POOL_ADDRESS,
+    ]);
+    const selectors = getSelectors(AaveFacet.interface);
     await diamondCutFacet.diamondCut(
       [
         {
-          facetAddress: addresses[4],
+          facetAddress: addresses[5],
           action: FacetCutAction.Add,
-          functionSelectors: testSelectors,
+          functionSelectors: selectors,
         },
       ],
-      zeroAddress,
-      "0x"
+      addresses[5],
+      encodedData
     );
-    [...result] = await diamondLoupeFacet.facetFunctionSelectors(addresses[4]);
-    expect(result).to.have.members(testSelectors);
-    expect(addresses.length).to.equal(5);
-  });
-
-  // Test for aave deposit and withdraw functions
-  it("should deposit and withdraw aave", async function () {
-    // Deposit aave
-    const deposit = ethers.utils.id("deposit(uint256)");
-    const withdraw = ethers.utils.id("withdraw(uint256)");
-    const depositAmount = ethers.utils.parseEther("1");
-    const withdrawAmount = ethers.utils.parseEther("0.5");
-    const aaveAddress = "0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9";
-    const aave = await ethers.getContractAt("IERC20", aaveAddress);
-    const aaveBalanceBefore = await aave.balanceOf(
-      await accounts[0].getAddress()
-    );
-    await diamond.connect(accounts[0]).testFunc2(aaveAddress);
-    await aave
-      .connect(accounts[0])
-      .approve(await diamond.getAddress(), depositAmount);
-    await diamond.connect(accounts[0]).testFunc2(deposit, depositAmount);
-    const aaveBalanceAfter = await aave.balanceOf(
-      await accounts[0].getAddress()
-    );
-    expect(aaveBalanceAfter).to.equal(aaveBalanceBefore.sub(depositAmount));
-    await diamond.connect(accounts[0]).testFunc2(withdraw, withdrawAmount);
-    const aaveBalanceAfterWithdraw = await aave.balanceOf(
-      await accounts[0].getAddress()
-    );
-    expect(aaveBalanceAfterWithdraw).to.equal(
-      aaveBalanceAfter.add(withdrawAmount)
-    );
+    // console.log("Aave selectors: ", selectors);
+    [...result] = await diamondLoupeFacet.facetFunctionSelectors(addresses[5]);
+    expect(result).to.have.members(selectors);
+    expect(addresses.length).to.equal(6);
   });
 });

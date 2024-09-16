@@ -141,7 +141,7 @@ contract AaveFacetTest is Test {
         console2.log("Final DAI balance: ", finalBalance);
         assertEq(finalBalance, 0, "Repayment failed");
         uint256 finalDepositBalance = aaveFacet.getUserDepositBalance(address(this), WETH);
-        console2.log("Deposit balance in USD value: ", finalDepositBalance / 10 ** 8); // Aave saves the balance in 10^8 precision
+        console2.log("Deposit balance in USD value: ", finalDepositBalance / 10 ** 8); // 10 Ethers equivalent in USD
     }
 
     function testWithdrawMaxAmount() public {

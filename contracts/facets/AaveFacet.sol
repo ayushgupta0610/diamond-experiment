@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {console2} from "forge-std/console2.sol";
 import {LibAave} from "../libraries/LibAave.sol";
 import {IPool} from "@aave/core-v3/contracts/interfaces/IPool.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -22,7 +21,7 @@ contract AaveFacet is ReentrancyGuard, Initializable {
      */
     receive() external payable {}
 
-    function initialize(address lendingPool) external initializer {
+    function init(address lendingPool) external initializer {
        LibAave.setLendingPoolAddress(lendingPool);
     }
 
@@ -55,7 +54,6 @@ contract AaveFacet is ReentrancyGuard, Initializable {
         require(amount > 0, "Amount must be greater than 0");
         
         uint256 userBalance = IERC20(lendingPool().getReserveData(asset).aTokenAddress).balanceOf(msg.sender);
-        console2.log("User balance: ", userBalance);
 
         if (amount == type(uint256).max) {
             amount = userBalance;
@@ -67,7 +65,6 @@ contract AaveFacet is ReentrancyGuard, Initializable {
         IERC20(lendingPool().getReserveData(asset).aTokenAddress).approve(address(lendingPool()), amount);
         // Get the withdrawable amount possible
         uint withdrawableAmount = IAToken(lendingPool().getReserveData(asset).aTokenAddress).balanceOf(msg.sender);
-        console2.log("Withdrawable amount: ", withdrawableAmount);
 
         amountWithdrawn = lendingPool().withdraw(asset, amount, msg.sender);
 
@@ -107,7 +104,7 @@ contract AaveFacet is ReentrancyGuard, Initializable {
 
         // Calculate if enough collateral is available by msg.sender
         (uint256 totalCollateralBase, , , , , ) = lendingPool().getUserAccountData(msg.sender);
-        console2.log("Total collateral base: ", totalCollateralBase);
+       
         lendingPool().borrow(token, amount, interestRateMode, 0, msg.sender);
         // Transfer borrowed tokens to user
         token.safeTransfer(msg.sender, amount);
@@ -137,7 +134,6 @@ contract AaveFacet is ReentrancyGuard, Initializable {
         token.safeTransferFrom(msg.sender, address(this), amountToRepay);
         token.safeApprove(address(lendingPool()), amountToRepay);
 
-        console2.log("Repaying amount: ", amountToRepay);
         lendingPool().repay(token, amountToRepay, interestRateMode, msg.sender);
     }
 
