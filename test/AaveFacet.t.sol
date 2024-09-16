@@ -27,7 +27,7 @@ contract AaveFacetTest is Test {
         
         // Deploy AaveFacet
         aaveFacet = new AaveFacet();
-        aaveFacet.initialize(AAVE_POOL); // This wouldn't be the case with diamond. At the time of adding the facet, the lending pool address would be initialized
+        aaveFacet.init(AAVE_POOL); // This wouldn't be the case with diamond. At the time of adding the facet, the lending pool address would be initialized
         console2.log("AaveFacet deployed at: ", address(aaveFacet));
     }
 
