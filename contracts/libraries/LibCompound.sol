@@ -20,8 +20,15 @@ library LibCompound {
         return diamondStorage().userDeposits[user];
     }
 
-    function setUserDeposits(address user, uint256 amount) internal {
-        diamondStorage().userDeposits[user] = amount;
+    function updateUserDeposits(address user, uint256 amount, bool isDeposit) internal returns (uint256) {
+        DiamondStorage storage ds = diamondStorage();
+        if (isDeposit) {
+            ds.userDeposits[user] += amount;
+        } else {
+            require(ds.userDeposits[user] >= amount, "Insufficient balance");
+            ds.userDeposits[user] -= amount;
+        }
+        return ds.userDeposits[user];
     }
 
     function getCometAddress() internal view returns (address) {

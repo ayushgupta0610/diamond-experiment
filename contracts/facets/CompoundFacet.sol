@@ -24,8 +24,6 @@ interface IComet {
 contract CompoundFacet is ReentrancyGuard, Initializable {
     using SafeTransferLib for address;
 
-    mapping(address => uint256) public userDeposits; // TODO: Take this to LibCompound
-
     event Deposited(address indexed user, address indexed token, uint256 amount);
     event Withdrawn(address indexed user, address indexed token, uint256 amount);
     event RewardsHarvested(address indexed user, uint256 amount);
@@ -45,24 +43,24 @@ contract CompoundFacet is ReentrancyGuard, Initializable {
         token.safeApprove(address(comet()), amount);
         
         comet().supply(token, amount);
-        userDeposits[msg.sender] += amount;
+        LibCompound.updateUserDeposits(msg.sender, amount, true);
         
         emit Deposited(msg.sender, token, amount);
     }
 
     function withdraw(address token, uint256 amount) external nonReentrant {
         require(amount > 0, "Amount must be greater than 0");
-        require(userDeposits[msg.sender] >= amount, "Insufficient balance");
+        require(LibCompound.getUserDeposits(msg.sender) >= amount, "Insufficient balance");
 
         comet().withdraw(token, amount);
+        LibCompound.updateUserDeposits(msg.sender, amount, false);
         token.safeTransfer(msg.sender, amount);
-        userDeposits[msg.sender] -= amount;
 
         emit Withdrawn(msg.sender, token, amount);
     }
 
     function getUserBalance(address user) external view returns (uint256) {
-        return userDeposits[user];
+        return LibCompound.getUserDeposits(user);
     }
 
     function getTotalBalance() external view returns (uint256) {

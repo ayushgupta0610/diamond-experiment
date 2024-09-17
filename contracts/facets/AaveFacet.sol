@@ -141,4 +141,6 @@ contract AaveFacet is ReentrancyGuard, Initializable {
         address lendingPoolAddress = LibAave.getLendingPoolAddress(); // Get lending pool address from storage
         return IPool(lendingPoolAddress);
     }
+
+    // TODO: Check if emergencyWithdraw is required
 }
