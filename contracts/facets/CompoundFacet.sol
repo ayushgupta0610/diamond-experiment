@@ -31,9 +31,8 @@ contract CompoundFacet is ReentrancyGuard, Initializable {
         token.safeTransferFrom(msg.sender, address(this), amount);
         token.safeApprove(address(comet()), amount);
         
-        console2.log("Supplying: ", amount);
         comet().supply(token, amount);
-        console2.log("Supply executed: ", comet().balanceOf(address(this)));
+        console2.log("Deposit executed. Balance of this contract: ", comet().balanceOf(address(this)));
         LibCompound.updateUserDeposits(msg.sender, amount, true);
         
         emit Deposited(msg.sender, token, amount);
@@ -78,6 +77,7 @@ contract CompoundFacet is ReentrancyGuard, Initializable {
         uint supplyRate = comet().getSupplyRate(utilization);
         console2.log("Supply Rate: ", supplyRate); // Needs to be divided by 1e18
         uint256 baseTokenBalance = IERC20(comet().baseToken()).balanceOf(address(this));
+        console2.log("Base token balance: ", baseTokenBalance);
         if (baseTokenBalance > 0) {
             comet().baseToken().safeTransfer(msg.sender, baseTokenBalance);
             emit RewardsHarvested(msg.sender, baseTokenBalance);
