@@ -1,25 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
+import {console2} from "forge-std/console2.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import {SafeTransferLib} from "lib/solady/src/utils/SafeTransferLib.sol";
 import {ReentrancyGuard} from "lib/solady/src/utils/ReentrancyGuard.sol";
 import { Initializable } from "lib/solady/src/utils/Initializable.sol";
 import { LibCompound } from "../libraries/LibCompound.sol";
-
-
-interface IComet {
-    function supply(address asset, uint amount) external;
-    function withdraw(address asset, uint amount) external;
-    function balanceOf(address account) external view returns (uint256);
-    function accrueAccount(address account) external;
-    function baseToken() external view returns (address);
-    function baseTokenPriceFeed() external view returns (address);
-    function getSupplyRate(uint utilization) external view returns (uint);
-    function getBorrowRate(uint utilization) external view returns (uint);
-    function getUtilization() external view returns (uint);
-}
+import { IComet } from "../interfaces/IComet.sol";
 
 contract CompoundFacet is ReentrancyGuard, Initializable {
     using SafeTransferLib for address;
@@ -42,7 +31,9 @@ contract CompoundFacet is ReentrancyGuard, Initializable {
         token.safeTransferFrom(msg.sender, address(this), amount);
         token.safeApprove(address(comet()), amount);
         
+        console2.log("Supplying: ", amount);
         comet().supply(token, amount);
+        console2.log("Supply executed: ", comet().balanceOf(address(this)));
         LibCompound.updateUserDeposits(msg.sender, amount, true);
         
         emit Deposited(msg.sender, token, amount);
@@ -50,9 +41,11 @@ contract CompoundFacet is ReentrancyGuard, Initializable {
 
     function withdraw(address token, uint256 amount) external nonReentrant {
         require(amount > 0, "Amount must be greater than 0");
+        console2.log("User deposits: ", LibCompound.getUserDeposits(msg.sender));
         require(LibCompound.getUserDeposits(msg.sender) >= amount, "Insufficient balance");
 
         comet().withdraw(token, amount);
+        console2.log("Withdraw executed");
         LibCompound.updateUserDeposits(msg.sender, amount, false);
         token.safeTransfer(msg.sender, amount);
 
@@ -80,6 +73,10 @@ contract CompoundFacet is ReentrancyGuard, Initializable {
 
     function harvestRewards() external nonReentrant {
         comet().accrueAccount(address(this));
+        uint256 utilization = comet().getUtilization();
+        console2.log("Utilization: ", utilization);
+        uint supplyRate = comet().getSupplyRate(utilization);
+        console2.log("Supply Rate: ", supplyRate); // Needs to be divided by 1e18
         uint256 baseTokenBalance = IERC20(comet().baseToken()).balanceOf(address(this));
         if (baseTokenBalance > 0) {
             comet().baseToken().safeTransfer(msg.sender, baseTokenBalance);

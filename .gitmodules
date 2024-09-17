@@ -10,3 +10,6 @@
 [submodule "lib/solady"]
 	path = lib/solady
 	url = https://github.com/vectorized/solady
+[submodule "lib/comet"]
+	path = lib/comet
+	url = https://github.com/compound-finance/comet
