@@ -16,7 +16,7 @@ contract AaveFacetTest is Test {
     address constant AAVE_POOL = 0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2;
     address constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     address constant DAI = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
-    address constant WHALE = 0xF977814e90dA44bFA03b6295A0616a897441aceC; // Binance hot wallet
+    address constant WHALE = 0x57757E3D981446D585Af0D9Ae4d7DF6D64647806; // Binance hot wallet
 
     function setUp() public {
         // Fork Ethereum mainnet

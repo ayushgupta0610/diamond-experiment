@@ -1,7 +1,14 @@
 import { ethers, network } from "hardhat";
 import { expect } from "chai";
 import { Contract, Signer, Interface, FunctionFragment } from "ethers";
-import { AaveFacet, AaveFacet__factory, IERC20 } from "../typechain-types";
+import {
+  AaveFacet,
+  CompoundFacet,
+  AaveFacet__factory,
+  CompoundFacet__factory,
+  IERC20,
+  IComet,
+} from "../typechain-types";
 
 interface FacetCut {
   facetAddress: string;
@@ -15,7 +22,7 @@ enum FacetCutAction {
   Remove,
 }
 
-const WHALE_ADDRESS = "0xD3a7e3C5602F8A66B58dc17ce33f739eFac33da2"; // WETH holder
+const WHALE_ADDRESS = "0x57757E3D981446D585Af0D9Ae4d7DF6D64647806"; // WETH holder
 
 function getSelectors(contractInterface: Interface): string[] {
   const selectors: string[] = [];
@@ -60,6 +67,7 @@ async function setBalance(
   tokenAddress: string,
   balance: bigint
 ): Promise<Signer> {
+  await impersonateSigner(account);
   await network.provider.request({
     method: "hardhat_setBalance",
     params: [account, "0x56BC75E2D63100000"],
@@ -70,25 +78,51 @@ async function setBalance(
     tokenAddress
   );
   const whale = await impersonateSigner(WHALE_ADDRESS);
-  token.connect(whale).transfer(account, balance);
+  await token.connect(whale).transfer(account, balance);
+
   return await ethers.provider.getSigner(account);
+}
+
+async function addFacetToDiamond(
+  facetInterface: Interface,
+  initAddress: string,
+  facetAddress: string,
+  diamondCutFacet: Contract
+) {
+  const encodedData = facetInterface.encodeFunctionData("init", [initAddress]);
+  const selectors = getSelectors(facetInterface);
+  await diamondCutFacet.diamondCut(
+    [
+      {
+        facetAddress: facetAddress,
+        action: FacetCutAction.Add,
+        functionSelectors: selectors,
+      },
+    ],
+    facetAddress,
+    encodedData
+  );
 }
 
 describe("DiamondAaveTest", function () {
   let diamondCutFacet: Contract,
     diamondLoupeFacet: Contract,
     ownershipFacet: Contract,
-    aaveFacet: AaveFacet;
+    aaveFacet: AaveFacet,
+    compoundFacet: CompoundFacet;
   let AaveFacet: AaveFacet__factory;
+  let CompoundFacet: CompoundFacet__factory;
   let diamond: Contract;
   let weth: IERC20;
   let owner: Signer;
   let result: string[];
   let addresses: string[] = [];
   let accounts: Signer[];
+  let diamondAddress: string;
 
   const WETH_ADDRESS = "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2";
   const AAVE_POOL_ADDRESS = "0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2";
+  const COMET_ADDRESS = "0xc3d688B66703497DAA19211EEdff47f25384cdc3";
   const FRESH_ADDRESS = "0x4B7b13C0bbcCa0D6c6863a6E0A0101554271EB17"; // Random account with no eth and weth
 
   before(async function () {
@@ -118,6 +152,9 @@ describe("DiamondAaveTest", function () {
     AaveFacet = await ethers.getContractFactory("AaveFacet");
     const deployedAaveFacet = await AaveFacet.deploy();
     addresses.push(await deployedAaveFacet.getAddress());
+    CompoundFacet = await ethers.getContractFactory("CompoundFacet");
+    const deployedCompoundFacet = await CompoundFacet.deploy();
+    addresses.push(await deployedCompoundFacet.getAddress());
     const facets = [
       DiamondCutFacet.interface,
       DiamondLoupeFacet.interface,
@@ -129,43 +166,42 @@ describe("DiamondAaveTest", function () {
       owner: await accounts[0].getAddress(),
     };
     diamond = await Diamond.deploy(facetCuts, diamondArgs);
+    diamondAddress = await diamond.getAddress();
 
     diamondCutFacet = await ethers.getContractAt(
       "DiamondCutFacet",
-      await diamond.getAddress()
+      diamondAddress
     );
 
     // Add AaveFacet to diamond
-    const encodedData = AaveFacet.interface.encodeFunctionData("init", [
+    await addFacetToDiamond(
+      AaveFacet.interface,
       AAVE_POOL_ADDRESS,
-    ]);
-    const selectors = getSelectors(AaveFacet.interface);
-    await diamondCutFacet.diamondCut(
-      [
-        {
-          facetAddress: addresses[3],
-          action: FacetCutAction.Add,
-          functionSelectors: selectors,
-        },
-      ],
       addresses[3],
-      encodedData
+      diamondCutFacet
+    );
+
+    // Add CompoundFacet to diamond
+    await addFacetToDiamond(
+      CompoundFacet.interface,
+      COMET_ADDRESS,
+      addresses[4],
+      diamondCutFacet
     );
 
     diamondLoupeFacet = await ethers.getContractAt(
       "DiamondLoupeFacet",
-      await diamond.getAddress()
+      diamondAddress
     );
 
     ownershipFacet = await ethers.getContractAt(
       "OwnershipFacet",
-      await diamond.getAddress()
+      diamondAddress
     );
 
-    aaveFacet = await ethers.getContractAt(
-      "AaveFacet",
-      await diamond.getAddress()
-    );
+    aaveFacet = await ethers.getContractAt("AaveFacet", diamondAddress);
+
+    compoundFacet = await ethers.getContractAt("CompoundFacet", diamondAddress);
 
     // Get owner() from ownership facet
     console.log("Account 0: ", await accounts[0].getAddress());
@@ -267,5 +303,58 @@ describe("DiamondAaveTest", function () {
     );
     console.log("Deposit balance in Aave:", depositBalance.toString());
     expect(depositBalance).to.be.lt(depositAmount);
+  });
+
+  // Write test cases to add Compound Facet and since the approval would be there because of the proxy storage, it  won't be required here
+  it("should successfully deposit WETH", async function () {
+    // Deposit WETH
+    const depositAmount = ethers.parseEther("1");
+
+    // Check owner's WETH balance before approval
+    const balanceBeforeApproval = await weth.balanceOf(FRESH_ADDRESS);
+    console.log(
+      "Owner balance before approval:",
+      balanceBeforeApproval.toString()
+    );
+
+    // Approve WETH spending but on Aave facet, which is basically the diamond to show that the approval is already there
+    await weth
+      .connect(owner)
+      .approve(await aaveFacet.getAddress(), depositAmount);
+    console.log("AaveFacet address:", await aaveFacet.getAddress());
+    console.log("CompoundFacet address:", await compoundFacet.getAddress());
+
+    // Check allowance
+    const allowance = await weth.allowance(
+      FRESH_ADDRESS,
+      await compoundFacet.getAddress()
+    );
+
+    // Ensure allowance is set correctly
+    expect(allowance).to.equal(depositAmount);
+
+    // Get initial balance
+    const initialBalance = await weth.balanceOf(FRESH_ADDRESS);
+    console.log("Initial balance:", initialBalance.toString());
+
+    // Deposit WETH
+    await compoundFacet
+      .connect(owner)
+      .compoundDeposit(WETH_ADDRESS, depositAmount);
+
+    // Check balance after deposit
+    const finalBalance = await weth.balanceOf(FRESH_ADDRESS);
+    console.log("Final balance:", finalBalance.toString());
+
+    const depositBalance = await compoundFacet.getUserBalance(
+      FRESH_ADDRESS,
+      WETH_ADDRESS
+    );
+
+    console.log("Deposit balance in Compound:", depositBalance.toString());
+
+    // Assertions
+    expect(finalBalance).to.equal(initialBalance - depositAmount);
+    expect(depositBalance).to.be.gt(0);
   });
 });

@@ -21,6 +21,11 @@ contract AaveFacet is ReentrancyGuard, Initializable {
      */
     receive() external payable {}
 
+    function _initializableSlot() internal pure override returns (bytes32) {
+        // keccak256(bytes("AaveInitialized(uint64)"))
+        return 0x7e20f142a08eb9c6f5e04bc5a1bdd97f26aa54adf3c31d715a67fe32b47f3cd7;
+    }
+
     function init(address lendingPool) external initializer {
        LibAave.setLendingPoolAddress(lendingPool);
     }

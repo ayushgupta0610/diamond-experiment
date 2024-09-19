@@ -14,7 +14,7 @@ contract CompoundFacetTest is Test {
     address constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
     address constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     address constant DAI = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
-    address constant WHALE = 0xF977814e90dA44bFA03b6295A0616a897441aceC; // Binance hot wallet
+    address constant WHALE = 0x57757E3D981446D585Af0D9Ae4d7DF6D64647806; // Binance hot wallet
     IComet public comet;
     IERC20 public usdc;
     IERC20 public weth;
@@ -49,7 +49,7 @@ contract CompoundFacetTest is Test {
         weth.approve(address(compoundFacet), depositAmount);
         compoundFacet.compoundDeposit(WETH, depositAmount);
 
-        assertEq(compoundFacet.getUserBalance(address(this)), depositAmount, "User balance should match deposit amount");
+        assertEq(compoundFacet.getUserBalance(address(this), WETH), depositAmount, "User balance should match deposit amount");
         assertEq(weth.balanceOf(address(compoundFacet)), 0, "Wrapper should have no USDC balance");
     }
 
@@ -65,7 +65,7 @@ contract CompoundFacetTest is Test {
         uint256 balanceAfter = weth.balanceOf(address(this));
 
         assertEq(balanceAfter - balanceBefore, withdrawAmount, "Withdrawn amount should match");
-        assertEq(compoundFacet.getUserBalance(address(this)), depositAmount - withdrawAmount, "User balance should be updated correctly");
+        assertEq(compoundFacet.getUserBalance(address(this), WETH), depositAmount - withdrawAmount, "User balance should be updated correctly");
     }
 
     function testCompoundMultipleDepositsAndWithdrawals() public {
@@ -81,17 +81,17 @@ contract CompoundFacetTest is Test {
         compoundFacet.compoundDeposit(WETH, secondDeposit);
 
 
-        assertEq(compoundFacet.getUserBalance(address(this)), firstDeposit + secondDeposit, "Balance should match total deposits");
+        assertEq(compoundFacet.getUserBalance(address(this), WETH), firstDeposit + secondDeposit, "Balance should match total deposits");
 
         // Partial withdrawal
         compoundFacet.compoundWithdraw(WETH, firstDeposit);
 
-        assertEq(compoundFacet.getUserBalance(address(this)), secondDeposit, "Balance should match remaining deposit");
+        assertEq(compoundFacet.getUserBalance(address(this), WETH), secondDeposit, "Balance should match remaining deposit");
 
         // Full withdrawal
         compoundFacet.compoundWithdraw(WETH, secondDeposit); // Why is this small amount getting deducted by comet? Is this because of rounding issue? or any fees at play?        
 
-        assertEq(compoundFacet.getUserBalance(address(this)), 0, "Balance should be zero after full withdrawal");
+        assertEq(compoundFacet.getUserBalance(address(this), WETH), 0, "Balance should be zero after full withdrawal");
     }
 
     function testGetSupplyAndBorrowRates() public {
