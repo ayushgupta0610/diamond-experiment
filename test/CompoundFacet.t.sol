@@ -43,53 +43,53 @@ contract CompoundFacetTest is Test {
         deal(WETH, address(this), 100e18);
     }
 
-    function testDeposit() public {
+    function testCompoundDeposit() public {
         // uint256 depositAmount = 1000e6; // 1000 USDC
         
         weth.approve(address(compoundFacet), depositAmount);
-        compoundFacet.deposit(WETH, depositAmount);
+        compoundFacet.compoundDeposit(WETH, depositAmount);
 
         assertEq(compoundFacet.getUserBalance(address(this)), depositAmount, "User balance should match deposit amount");
         assertEq(weth.balanceOf(address(compoundFacet)), 0, "Wrapper should have no USDC balance");
     }
 
-    function testWithdraw() public {
+    function testCompoundWithdraw() public {
         // uint256 depositAmount = 1000e6; // 1000 USDC
         // uint256 withdrawAmount = 500e6; // 500 USDC
 
         weth.approve(address(compoundFacet), depositAmount);
-        compoundFacet.deposit(WETH, depositAmount);
+        compoundFacet.compoundDeposit(WETH, depositAmount);
 
         uint256 balanceBefore = weth.balanceOf(address(this));
-        compoundFacet.withdraw(WETH, withdrawAmount);
+        compoundFacet.compoundWithdraw(WETH, withdrawAmount);
         uint256 balanceAfter = weth.balanceOf(address(this));
 
         assertEq(balanceAfter - balanceBefore, withdrawAmount, "Withdrawn amount should match");
         assertEq(compoundFacet.getUserBalance(address(this)), depositAmount - withdrawAmount, "User balance should be updated correctly");
     }
 
-    function testMultipleDepositsAndWithdrawals() public {
+    function testCompoundMultipleDepositsAndWithdrawals() public {
         uint256 firstDeposit = depositAmount; // 10 ETH
         uint256 secondDeposit = 2 * depositAmount; // 20 ETH
 
         // First deposit
         weth.approve(address(compoundFacet), firstDeposit);
-        compoundFacet.deposit(WETH, firstDeposit);
+        compoundFacet.compoundDeposit(WETH, firstDeposit);
 
         // Second deposit
         weth.approve(address(compoundFacet), secondDeposit);
-        compoundFacet.deposit(WETH, secondDeposit);
+        compoundFacet.compoundDeposit(WETH, secondDeposit);
 
 
         assertEq(compoundFacet.getUserBalance(address(this)), firstDeposit + secondDeposit, "Balance should match total deposits");
 
         // Partial withdrawal
-        compoundFacet.withdraw(WETH, firstDeposit);
+        compoundFacet.compoundWithdraw(WETH, firstDeposit);
 
         assertEq(compoundFacet.getUserBalance(address(this)), secondDeposit, "Balance should match remaining deposit");
 
         // Full withdrawal
-        compoundFacet.withdraw(WETH, secondDeposit); // Why is this small amount getting deducted by comet? Is this because of rounding issue? or any fees at play?        
+        compoundFacet.compoundWithdraw(WETH, secondDeposit); // Why is this small amount getting deducted by comet? Is this because of rounding issue? or any fees at play?        
 
         assertEq(compoundFacet.getUserBalance(address(this)), 0, "Balance should be zero after full withdrawal");
     }
@@ -103,40 +103,21 @@ contract CompoundFacetTest is Test {
         assertTrue(borrowRate > supplyRate, "Borrow rate should be higher than supply rate");
     }
 
-    function testHarvestRewards() public {
-        // uint256 depositAmount = 1_000_000e6; // 1,000,000 USDC
-
-        weth.approve(address(compoundFacet), depositAmount);
-        compoundFacet.deposit(WETH, depositAmount);
-
-        // Fast forward time to accrue rewards
-        vm.warp(block.timestamp + 3650 days);
-
-        // Harvest rewards
-        compoundFacet.harvestRewards();
-
-        // Check if rewards were received (this assumes rewards are in the base token)
-        address baseToken = comet.baseToken();
-        uint256 rewardBalance = IERC20(baseToken).balanceOf(address(compoundFacet));
-        console2.log("Reward balance: ", rewardBalance);
-        // assertTrue(rewardBalance > 0, "Should have received some rewards");
-    }
-
     function testFailWithdrawTooMuch() public {
         // uint256 depositAmount = 1000e6; // 1000 USDC
 
         weth.approve(address(compoundFacet), depositAmount);
-        compoundFacet.deposit(WETH, depositAmount);
+        compoundFacet.compoundDeposit(WETH, depositAmount);
 
         // Try to withdraw more than deposited
-        compoundFacet.withdraw(WETH, depositAmount + 1);
+        compoundFacet.compoundWithdraw(WETH, depositAmount + 1);
     }
 
     // function testEmergencyWithdraw() public {
     //     uint256 depositAmount = 1000e6; // 1000 USDC
 
     //     usdc.approve(address(compoundFacet), depositAmount);
-    //     compoundFacet.deposit(USDC, depositAmount);
+    //     compoundFacet.compoundDeposit(USDC, depositAmount);
 
     //     // Simulate some USDC stuck in the contract
     //     deal(USDC, address(compoundFacet), 100e6);

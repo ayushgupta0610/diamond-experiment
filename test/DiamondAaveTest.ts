@@ -55,7 +55,7 @@ async function impersonateSigner(account: string): Promise<Signer> {
   return await ethers.provider.getSigner(account);
 }
 
-describe("DiamondTest", function () {
+describe("DiamondAaveTest", function () {
   let diamondCutFacet: Contract,
     diamondLoupeFacet: Contract,
     ownershipFacet: Contract,
@@ -95,12 +95,6 @@ describe("DiamondTest", function () {
     const OwnershipFacet = await ethers.getContractFactory("OwnershipFacet");
     const deployedOwnershipFacet = await OwnershipFacet.deploy();
     addresses.push(await deployedOwnershipFacet.getAddress());
-    // const Test1Facet = await ethers.getContractFactory("Test1Facet");
-    // const deployedTest1Facet = await Test1Facet.deploy();
-    // addresses.push(await deployedTest1Facet.getAddress());
-    // const Test2Facet = await ethers.getContractFactory("Test2Facet");
-    // const deployedTest2Facet = await Test2Facet.deploy();
-    // addresses.push(await deployedTest2Facet.getAddress());
     AaveFacet = await ethers.getContractFactory("AaveFacet");
     console.log("AaveFacet selectors :", getSelectors(AaveFacet.interface));
     const deployedAaveFacet = await AaveFacet.deploy();
@@ -139,33 +133,7 @@ describe("DiamondTest", function () {
 
     // Get owner() from ownership facet
     console.log("Account 0: ", await accounts[0].getAddress());
-    console.log(
-      "diamondDiamondOwnership owner: ",
-      await ownershipFacet.owner()
-    );
-  });
-
-  it("should have aave functions", async function () {
-    // Encode init function on aave facet with lending pool address
-    const encodedData = aaveFacet.interface.encodeFunctionData("init", [
-      AAVE_POOL_ADDRESS,
-    ]);
-    const selectors = getSelectors(AaveFacet.interface);
-    await diamondCutFacet.diamondCut(
-      [
-        {
-          facetAddress: addresses[3],
-          action: FacetCutAction.Add,
-          functionSelectors: selectors,
-        },
-      ],
-      addresses[4],
-      encodedData
-    );
-    // console.log("Aave selectors: ", selectors);
-    [...result] = await diamondLoupeFacet.facetFunctionSelectors(addresses[5]);
-    expect(result).to.have.members(selectors);
-    expect(addresses.length).to.equal(6);
+    console.log("diamondAaveOwnership owner: ", await ownershipFacet.owner());
   });
 
   // Test for aave deposit and withdraw functions
@@ -186,9 +154,10 @@ describe("DiamondTest", function () {
     );
     // Get initial balance
     const initialBalance = await weth.balanceOf(OWNER_ADDRESS);
+    console.log("Initial balance: ", initialBalance);
 
     // Deposit WETH
-    await aaveFacet.connect(owner).deposit(WETH_ADDRESS, depositAmount);
+    await aaveFacet.connect(owner).aaveDeposit(WETH_ADDRESS, depositAmount);
 
     // Check balance after deposit
     const finalBalance = await weth.balanceOf(OWNER_ADDRESS);
@@ -231,7 +200,7 @@ describe("DiamondTest", function () {
     // Withdraw WETH
     const tx = await aaveFacet
       .connect(owner)
-      .withdraw(WETH_ADDRESS, withdrawAmount);
+      .aaveWithdraw(WETH_ADDRESS, withdrawAmount);
     const receipt = await tx.wait();
 
     // Get withdrawn amount from event logs

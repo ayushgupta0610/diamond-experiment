@@ -30,7 +30,7 @@ contract AaveFacet is ReentrancyGuard, Initializable {
      * @param token The address of the token to deposit
      * @param amount The amount of tokens to deposit
      */
-    function deposit(address token, uint256 amount) external {
+    function aaveDeposit(address token, uint256 amount) external {
         require(amount > 0, "Amount must be greater than 0");
         
         // Transfer tokens from user to this contract
@@ -50,7 +50,7 @@ contract AaveFacet is ReentrancyGuard, Initializable {
      * @param asset The address of the underlying asset to withdraw
      * @param amount The amount of the underlying asset to withdraw
      */
-    function withdraw(address asset, uint256 amount) external nonReentrant returns (uint256 amountWithdrawn) {
+    function aaveWithdraw(address asset, uint256 amount) external nonReentrant returns (uint256 amountWithdrawn) {
         require(amount > 0, "Amount must be greater than 0");
         
         uint256 userBalance = IERC20(lendingPool().getReserveData(asset).aTokenAddress).balanceOf(msg.sender);
