@@ -61,6 +61,10 @@ contract CompoundFacetTest is Test {
         compoundFacet.compoundDeposit(WETH, depositAmount);
 
         uint256 balanceBefore = weth.balanceOf(address(this));
+
+        // Ensure withdrawAmount does not exceed depositAmount
+        require(withdrawAmount <= depositAmount, "Cannot withdraw more than deposited");
+
         compoundFacet.compoundWithdraw(WETH, withdrawAmount);
         uint256 balanceAfter = weth.balanceOf(address(this));
 
@@ -94,7 +98,7 @@ contract CompoundFacetTest is Test {
         assertEq(compoundFacet.getUserBalance(address(this), WETH), 0, "Balance should be zero after full withdrawal");
     }
 
-    function testGetSupplyAndBorrowRates() public {
+    function testGetSupplyAndBorrowRates() public view {
         uint256 supplyRate = compoundFacet.getSupplyRate();
         uint256 borrowRate = compoundFacet.getBorrowRate();
 

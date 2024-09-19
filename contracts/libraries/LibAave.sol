@@ -6,7 +6,6 @@ library LibAave {
 
     struct DiamondStorage {
         address lendingPool;
-        // address contractOwner;
     }
 
     function diamondStorage() internal pure returns (DiamondStorage storage ds) {
@@ -15,10 +14,6 @@ library LibAave {
             ds.slot := position
         }
     }
-
-    // function contractOwner() internal view returns (address contractOwner_) {
-    //     contractOwner_ = diamondStorage().contractOwner;
-    // }
 
     function getLendingPoolAddress() internal view returns (address) {
         require(diamondStorage().lendingPool != address(0), "LibAave: Lending pool not set");

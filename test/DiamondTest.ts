@@ -123,12 +123,12 @@ describe("DiamondAaveTest", function () {
   const WETH_ADDRESS = "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2";
   const AAVE_POOL_ADDRESS = "0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2";
   const COMET_ADDRESS = "0xc3d688B66703497DAA19211EEdff47f25384cdc3";
-  const FRESH_ADDRESS = "0x4B7b13C0bbcCa0D6c6863a6E0A0101554271EB17"; // Random account with no eth and weth
+  const OWNER_ADDRESS = "0x4B7b13C0bbcCa0D6c6863a6E0A0101554271EB17"; // Random account with no eth and weth
 
   before(async function () {
     accounts = await ethers.getSigners();
     owner = await setBalance(
-      FRESH_ADDRESS,
+      OWNER_ADDRESS,
       WETH_ADDRESS,
       BigInt(300 * 10 ** 18)
     );
@@ -208,18 +208,18 @@ describe("DiamondAaveTest", function () {
     console.log("diamond Ownership owner: ", await ownershipFacet.owner());
   });
 
-  it("should successfully deposit WETH", async function () {
+  it("should successfully deposit WETH to Aave", async function () {
     console.log(
       "Zeroth deposit balance in Aave:",
       (
-        await aaveFacet.getUserDepositBalance(FRESH_ADDRESS, WETH_ADDRESS)
+        await aaveFacet.getUserDepositBalance(OWNER_ADDRESS, WETH_ADDRESS)
       ).toString()
     );
     // Deposit WETH
     const depositAmount = ethers.parseEther("1");
 
     // Check owner's WETH balance before approval
-    const balanceBeforeApproval = await weth.balanceOf(FRESH_ADDRESS);
+    const balanceBeforeApproval = await weth.balanceOf(OWNER_ADDRESS);
     console.log(
       "Owner balance before approval:",
       balanceBeforeApproval.toString()
@@ -232,7 +232,7 @@ describe("DiamondAaveTest", function () {
 
     // Check allowance
     const allowance = await weth.allowance(
-      FRESH_ADDRESS,
+      OWNER_ADDRESS,
       await aaveFacet.getAddress()
     );
 
@@ -240,19 +240,19 @@ describe("DiamondAaveTest", function () {
     expect(allowance).to.equal(depositAmount);
 
     // Get initial balance
-    const initialBalance = await weth.balanceOf(FRESH_ADDRESS);
+    const initialBalance = await weth.balanceOf(OWNER_ADDRESS);
     console.log("Initial balance:", initialBalance.toString());
 
     // Deposit WETH
     await aaveFacet.connect(owner).aaveDeposit(WETH_ADDRESS, depositAmount);
 
     // Check balance after deposit
-    const finalBalance = await weth.balanceOf(FRESH_ADDRESS);
+    const finalBalance = await weth.balanceOf(OWNER_ADDRESS);
     console.log("Final balance:", finalBalance.toString());
 
     // Check user's deposit balance in Aave
     const depositBalance = await aaveFacet.getUserDepositBalance(
-      FRESH_ADDRESS,
+      OWNER_ADDRESS,
       WETH_ADDRESS
     );
     console.log("Deposit balance in Aave:", depositBalance.toString());
@@ -262,7 +262,7 @@ describe("DiamondAaveTest", function () {
     expect(depositBalance).to.be.gt(0); // Value received would be in USD with 8 decimals
   });
 
-  it("should successfully withdraw WETH", async function () {
+  it("should successfully withdraw WETH from Aave", async function () {
     const depositAmount = ethers.parseEther("1");
     const withdrawAmount = ethers.parseEther("0.5");
 
@@ -272,7 +272,7 @@ describe("DiamondAaveTest", function () {
     await aaveFacet.connect(owner).aaveDeposit(WETH_ADDRESS, depositAmount);
 
     // Get initial balance
-    const initialBalance = await weth.balanceOf(FRESH_ADDRESS);
+    const initialBalance = await weth.balanceOf(OWNER_ADDRESS);
     console.log("Initial balance after deposit:", initialBalance.toString());
 
     // Get aToken address
@@ -293,12 +293,12 @@ describe("DiamondAaveTest", function () {
     const receipt = await tx.wait();
 
     // Check balance after withdrawal
-    const finalBalance = await weth.balanceOf(FRESH_ADDRESS);
+    const finalBalance = await weth.balanceOf(OWNER_ADDRESS);
     expect(finalBalance).to.equal(initialBalance + withdrawAmount);
 
     // Check user's deposit balance in Aave
     const depositBalance = await aaveFacet.getUserDepositBalance(
-      FRESH_ADDRESS,
+      OWNER_ADDRESS,
       WETH_ADDRESS
     );
     console.log("Deposit balance in Aave:", depositBalance.toString());
@@ -306,12 +306,16 @@ describe("DiamondAaveTest", function () {
   });
 
   // Write test cases to add Compound Facet and since the approval would be there because of the proxy storage, it  won't be required here
-  it("should successfully deposit WETH", async function () {
+  it("should successfully deposit WETH to Compound", async function () {
     // Deposit WETH
     const depositAmount = ethers.parseEther("1");
+    const initialDepositBalance = await compoundFacet.getUserBalance(
+      OWNER_ADDRESS,
+      WETH_ADDRESS
+    );
 
     // Check owner's WETH balance before approval
-    const balanceBeforeApproval = await weth.balanceOf(FRESH_ADDRESS);
+    const balanceBeforeApproval = await weth.balanceOf(OWNER_ADDRESS);
     console.log(
       "Owner balance before approval:",
       balanceBeforeApproval.toString()
@@ -321,12 +325,10 @@ describe("DiamondAaveTest", function () {
     await weth
       .connect(owner)
       .approve(await aaveFacet.getAddress(), depositAmount);
-    console.log("AaveFacet address:", await aaveFacet.getAddress());
-    console.log("CompoundFacet address:", await compoundFacet.getAddress());
 
     // Check allowance
     const allowance = await weth.allowance(
-      FRESH_ADDRESS,
+      OWNER_ADDRESS,
       await compoundFacet.getAddress()
     );
 
@@ -334,7 +336,7 @@ describe("DiamondAaveTest", function () {
     expect(allowance).to.equal(depositAmount);
 
     // Get initial balance
-    const initialBalance = await weth.balanceOf(FRESH_ADDRESS);
+    const initialBalance = await weth.balanceOf(OWNER_ADDRESS);
     console.log("Initial balance:", initialBalance.toString());
 
     // Deposit WETH
@@ -343,18 +345,54 @@ describe("DiamondAaveTest", function () {
       .compoundDeposit(WETH_ADDRESS, depositAmount);
 
     // Check balance after deposit
-    const finalBalance = await weth.balanceOf(FRESH_ADDRESS);
+    const finalBalance = await weth.balanceOf(OWNER_ADDRESS);
     console.log("Final balance:", finalBalance.toString());
 
     const depositBalance = await compoundFacet.getUserBalance(
-      FRESH_ADDRESS,
+      OWNER_ADDRESS,
       WETH_ADDRESS
     );
 
-    console.log("Deposit balance in Compound:", depositBalance.toString());
-
     // Assertions
     expect(finalBalance).to.equal(initialBalance - depositAmount);
-    expect(depositBalance).to.be.gt(0);
+    expect(depositBalance).to.equal(depositAmount - initialDepositBalance);
+  });
+
+  it("should successfully withdraw WETH from Compound", async function () {
+    const depositAmount = ethers.parseEther("1");
+    const withdrawAmount = ethers.parseEther("0.5");
+
+    await weth
+      .connect(owner)
+      .approve(await compoundFacet.getAddress(), depositAmount);
+    await compoundFacet
+      .connect(owner)
+      .compoundDeposit(WETH_ADDRESS, depositAmount);
+
+    // Get initial balance
+    const initialBalance = await weth.balanceOf(OWNER_ADDRESS);
+    console.log("Initial balance after deposit:", initialBalance.toString());
+
+    // Withdraw WETH
+    // Make instance of IComet
+    const comet = await ethers.getContractAt("IComet", COMET_ADDRESS);
+    await comet.connect(owner).withdraw(WETH_ADDRESS, withdrawAmount);
+    // await comet.connect(owner).transfer(diamondAddress, withdrawAmount);
+    // const tx = await compoundFacet
+    //   .connect(owner)
+    //   .compoundWithdraw(WETH_ADDRESS, withdrawAmount);
+    // const receipt = await tx.wait();
+
+    // Check balance after withdrawal
+    const finalBalance = await weth.balanceOf(OWNER_ADDRESS);
+    expect(finalBalance).to.equal(initialBalance + withdrawAmount);
+
+    // Check user's deposit balance in Aave
+    const depositBalance = await compoundFacet.getUserBalance(
+      OWNER_ADDRESS,
+      WETH_ADDRESS
+    );
+    console.log("Deposit balance in Aave:", depositBalance.toString());
+    expect(depositBalance).to.equal(depositAmount - withdrawAmount);
   });
 });

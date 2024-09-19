@@ -6,7 +6,6 @@ library LibCompound {
 
     struct DiamondStorage {
         address cometAddress;
-        mapping(address => uint256) userDeposits;
     }
 
     function diamondStorage() internal pure returns (DiamondStorage storage ds) {
@@ -14,21 +13,6 @@ library LibCompound {
         assembly {
             ds.slot := position
         }
-    }
-
-    function getUserDeposits(address user) internal view returns (uint256) {
-        return diamondStorage().userDeposits[user];
-    }
-
-    function updateUserDeposits(address user, uint256 amount, bool isDeposit) internal returns (uint256) {
-        DiamondStorage storage ds = diamondStorage();
-        if (isDeposit) {
-            ds.userDeposits[user] += amount;
-        } else {
-            require(ds.userDeposits[user] >= amount, "Insufficient balance");
-            ds.userDeposits[user] -= amount;
-        }
-        return ds.userDeposits[user];
     }
 
     function getCometAddress() internal view returns (address) {
