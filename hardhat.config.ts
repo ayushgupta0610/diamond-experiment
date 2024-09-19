@@ -7,6 +7,9 @@ envEnc.config();
 
 const config: HardhatUserConfig = {
   networks: {
+    localhost: {
+      loggingEnabled: true,
+    },
     hardhat: {
       loggingEnabled: true,
     },
