@@ -10,9 +10,6 @@ const config: HardhatUserConfig = {
     localhost: {
       loggingEnabled: true,
     },
-    hardhat: {
-      loggingEnabled: true,
-    },
     ethereum: {
       url: `${process.env.ETHEREUM_RPC_URL}`,
       accounts: [`${process.env.PRIVATE_KEY}`], // Your private key
